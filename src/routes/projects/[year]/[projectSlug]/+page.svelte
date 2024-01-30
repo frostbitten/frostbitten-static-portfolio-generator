@@ -6,6 +6,8 @@
     import GalleryMedia from '$lib/GalleryMedia.svelte'
     import CloudflareStream from '$lib/CloudflareStream.svelte'
     import MediaPlaceholder from '$lib/MediaPlaceholder.svelte'
+    import YoutubeMedia from '$lib/YoutubeMedia.svelte'
+    import IframeMedia from '$lib/IframeMedia.svelte'
 
 	import md  from '$lib/markdownRenderer';
 
@@ -22,17 +24,20 @@
 			const sortName = (a,b)=>{
 				return a.baseName.localeCompare(b.baseName)
 			};
+			const sortSort = (a,b)=>{
+				return a.sort - b.sort
+			};
 			const goodMedia = project.medias.filter((mediaItem)=>{
 				return !mediaItem?.hidden
 			})
 			// console.log('goodMedia',goodMedia)
 			const sortFirst = goodMedia.filter((mediaItem)=>{
-				return mediaItem?.sort === -1
-			}).sort(sortName)
+				return mediaItem?.sort < 0
+			}).sort(sortSort)
 			// console.log('sortFirst',sortFirst)
 			const sortLast = goodMedia.filter((mediaItem)=>{
-				return mediaItem?.sort === 1
-			}).sort(sortName)
+				return mediaItem?.sort > 0
+			}).sort(sortSort)
 			// console.log('sortLast',sortLast)
 			const sortableMedia = goodMedia.filter((mediaItem)=>{
 				return mediaItem?.sort === undefined
@@ -77,6 +82,11 @@ header {
 	cursor: pointer;
 }
 
+:global(article.media .player) {
+	max-height: calc(var(--max-size) / var(--aspect-ratio));
+	max-width: calc(var(--max-size) * var(--aspect-ratio));
+}
+
 :global(article.media:not([data-ready="true"]) .player) {
 	position: relative;
 	:global(.media-placeholder) {
@@ -115,6 +125,10 @@ header {
 				<div class="player" style="--aspect-ratio: {media.aspectRatio}"><!-- {#if i===0 || mediaLoaded[i-1]} -->
 					{#if media.mediaType === "cloudflare-stream"}
 						<CloudflareStream mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
+					{:else if media.mediaType === "youtube"}
+						<YoutubeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
+					{:else if media.mediaType === "iframe"}
+						<IframeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
 					{:else if media.mediaType === "video"}
 						<FastVideo src="/projects/{year}/{slug}/media/{media.fileName}" bind:loaded={mediaLoaded[i]}   />
 					{:else if media.mediaType === "image"}

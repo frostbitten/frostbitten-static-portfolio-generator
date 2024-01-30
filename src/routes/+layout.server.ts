@@ -16,7 +16,7 @@ Object.keys(siteData).forEach(k=>{
     }
 })
 
-console.log('pageData',pageData)
+// console.log('pageData',pageData)
 export async function load() {
     return { siteData: siteDataMini, siteConfig: siteData.config, pages: pageData };
 }

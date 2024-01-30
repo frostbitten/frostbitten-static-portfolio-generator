@@ -2,10 +2,13 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+:root{
+    --loading-graphic: none;
+    --max-size: min(95svh,95svw);
+}
 body {
     // background-color: #676176;
     background-color: #eee;
-    --loading-graphic: none;
 }
 h1 {
     font-size: 2.5rem;

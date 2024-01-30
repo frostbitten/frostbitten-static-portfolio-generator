@@ -191,6 +191,31 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 		mediaItem.mediaType = "cloudflare-stream"
 
 	}
+	else if(mediaFile.endsWith('.yaml')){
+		console.log('handle yaml stream')
+		
+		const yamlContent = fs.readFileSync(mediaFullPath, 'utf8');
+		try {
+			const mediaInfo = YAML.parse(yamlContent);
+			Object.assign(mediaItem, mediaInfo);
+			// console.log('yaml mediaInfo: ',mediaInfo)
+			const width = mediaInfo.width;
+			const height = mediaInfo.height;
+			
+			mediaItem.fileName = mediaFile.split('.').slice(0, -1).join('.');
+			mediaItem.baseName = mediaItem.fileName;
+
+			setMediaSize(mediaItem,width,height)
+			
+			mediaItem.v = mediaInfo.v;
+			mediaItem.mediaType = mediaInfo.type;
+
+
+		}catch (e) {
+			console.error(`Error parsing ${mediaFullPath} file`,e);
+		}
+
+	}
 	else if(mediaType==="video"){
 		await new Promise((res) => {
 			ffprobe(mediaFullPath, { path: ffprobeStatic.path }, function (err, info) {
