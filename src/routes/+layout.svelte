@@ -3,14 +3,8 @@
 	import { page } from '$app/stores';
     // import { onMount } from 'svelte';
 	$: siteData = $page.data.siteData;
+	$: pages = $page.data.pages;
 	$: siteConfig = $page.data.siteConfig;
-    // import siteData from '../../data/siteData.js'; 
-
-    // onMount(() => {
-        // window.addEventListener("hashchange", (event) => {
-            // console.log('hashchange from primary layout')
-        // });
-    // });
 
 </script>
 <svelte:head>
@@ -28,7 +22,7 @@
         }
     }
 </style>
-  
+
 <div class="container mx-auto p-4" data-pathUrl={$page.url.pathname}>
     <div class="flex flex-wrap">
         <h1><a href="/">{siteConfig.name}</a></h1>
@@ -37,7 +31,9 @@
         <nav class="">
             <a href="/">Home</a>
             <a href="/projects#">Projects</a>
-            <a href="/about">About</a>
+            {#each pages as page}
+                <a href="/{page.slug}">{page.title}</a>
+            {/each}
         </nav>
         <main class=""><slot></slot></main>
     </div>
