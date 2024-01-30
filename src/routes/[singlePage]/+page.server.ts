@@ -7,7 +7,7 @@ import md  from '$lib/markdownRenderer';
 
 export async function load({params}) {
     const { singlePage } = params;
-    const pageData = siteData.pages[singlePage];
+    const pageContentMd = siteData.pages[singlePage];
     // console.log('got single page',{singlePage,pageData})
-    return { content: md.render(pageData||'') };
+    return { content: md.render(pageContentMd||'') };
 }

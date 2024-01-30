@@ -1,10 +1,13 @@
 <script>
     import '../styles/global.scss';
 	import { page } from '$app/stores';
+    // import { load } from './+page.server';
     // import { onMount } from 'svelte';
-	$: siteData = $page.data.siteData;
+	// $: siteData = $page.data.siteData;
 	$: pages = $page.data.pages;
 	$: siteConfig = $page.data.siteConfig;
+	$: loadingGraphic = $page.data.siteConfig?.['loading-graphic'];
+    $: loadingGraphicStyle = loadingGraphic ? `--loading-graphic: url('/${loadingGraphic}')` : '';
 
 </script>
 <svelte:head>
@@ -23,7 +26,7 @@
     }
 </style>
 
-<div class="container mx-auto p-4" data-pathUrl={$page.url.pathname}>
+<div class="container mx-auto p-4" data-pathUrl={$page.url.pathname} style="{loadingGraphicStyle}">
     <div class="flex flex-wrap">
         <h1><a href="/">{siteConfig.name}</a></h1>
     </div>

@@ -7,16 +7,14 @@
     import { inview } from 'svelte-inview';
     import type { ObserverEventDetails } from 'svelte-inview';
 
-    export let mediaItem:any;
-    let aspectRatio = mediaItem.aspectRatio;
+    export let cssClass = "";
+    export let aspectRatio:any;
 </script>
 <style lang="scss">
     .media-placeholder {
         padding-top: calc(100% / var(--aspect-ratio));
         background-color: #00000020;
     }
-    
-
 </style>
 <!-- svelte-ignore a11y-missing-attribute -->
-<div class="cover media-placeholder" style="position: relative; --aspect-ratio: {aspectRatio};"></div>
+<div class="{cssClass} media-placeholder" style="position: relative; --aspect-ratio: {aspectRatio};"></div>

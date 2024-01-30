@@ -4,6 +4,7 @@
     import { browser } from '$app/environment';
     import FastVideo from '$lib/FastVideo.svelte'
     import CloudflareStream from '$lib/CloudflareStream.svelte'
+    import FastImage from '$lib/FastImage.svelte';
 
     // console.log('page load')
 	$: siteData = $page.data.siteData;
@@ -142,32 +143,30 @@
     <!-- <pre>{JSON.stringify(filterWords)}</pre> -->
 </div>
 <section class="projects flex flex-wrap">
-    {#if ready}
-        {#each projects.filter(doFilterWords) as project}
-            <article class="w-full md:w-6/12 project">
-                <header>
-                    <a class="project-link-header" href="/projects/{project.year}/{project.slug}">
-                        <span class="title">{project.title}</span>
-                        <span class="year">{project.year}</span>
-                    </a>
-                </header>
-                <div class="cover">
-                    {#if project.cover}
-                        {#if project.cover.mediaType === "cloudflare-stream"}
-                            <CloudflareStream mediaItem={project.cover} />
-                        {:else if project.cover.mediaType === "video"}
-                            <!-- svelte-ignore a11y-media-has-caption -->
-                            <!-- <video class="cover" muted autoplay loop src="/projects/{project.year}/{project.slug}/media/{project.cover.fileName}"></video> -->
-                            <FastVideo src={`/projects/${project.year}/${project.slug}/media/${project.cover.fileName}`} />
-                        {:else}
-                            <img src="/projects/{project.year}/{project.slug}/media/thumb512/{project.cover.hash}.webp" alt="">
-                        {/if}
+    {#each projects.filter(doFilterWords) as project, projectI}
+        <article class="w-full md:w-6/12 project">
+            <header>
+                <a class="project-link-header" href="/projects/{project.year}/{project.slug}">
+                    <span class="title">{project.title}</span>
+                    <span class="year">{project.year}</span>
+                </a>
+            </header>
+            <div class="cover">
+                {#if project.cover}
+                    {#if project.cover.mediaType === "cloudflare-stream"}
+                        <CloudflareStream mediaItem={project.cover} />
+                    {:else if project.cover.mediaType === "video"}
+                        <!-- svelte-ignore a11y-media-has-caption -->
+                        <!-- <video class="cover" muted autoplay loop src="/projects/{project.year}/{project.slug}/media/{project.cover.fileName}"></video> -->
+                        <FastVideo src={`/projects/${project.year}/${project.slug}/media/${project.cover.fileName}`} />
                     {:else}
+                        <!-- <img src="/projects/{project.year}/{project.slug}/media/thumb512/{project.cover.hash}.webp" alt=""> -->
+                        <FastImage preload={false&&projectI<4} lazy={true} src="/projects/{project.year}/{project.slug}/media/thumb512/{project.cover.hash}.webp" alt="" />
                     {/if}
-                </div>
-                <!-- svelte-ignore a11y-missing-content -->
-                <a class="project-link" href="/projects/{project.year}/{project.slug}"></a>
-            </article>
-        {/each}
-    {/if}
+                {/if}
+            </div>
+            <!-- svelte-ignore a11y-missing-content -->
+            <a class="project-link" href="/projects/{project.year}/{project.slug}">{project.title}, {project.year}</a>
+        </article>
+    {/each}
 </section>

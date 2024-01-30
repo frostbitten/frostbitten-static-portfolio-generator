@@ -8,6 +8,7 @@
     import type { ObserverEventDetails } from 'svelte-inview';
 
     export let loaded:any = false;
+    export let i = 0;
     export let mediaItem:any;
     export let autoplay:bool = true;
     export let loop:bool = true;
@@ -17,7 +18,7 @@
     export let letterboxColor:string = 'rgba(0,0,0,0)';
 
 
-    $: videoDomain = $page.data.siteConfig.cloudflareStremDomain;
+    $: videoDomain = $page.data.siteConfig.cloudflareStreamDomain;
     $: src = `https://${videoDomain}/${mediaItem.uid}/iframe?autoplay=${String(autoplay)}&loop=${String(loop)}&muted=${String(muted)}&preload=${String(preload)}&controls=${String(controls)}&letterboxColor=${encodeURIComponent(letterboxColor)}`
 
     let isInView: boolean;
@@ -44,10 +45,16 @@
         
         player = window.Stream(videoRef);
         window.cfplayers[id] = player
-        player.addEventListener('play', () => {
-            // console.log('playing!');
-            ready=true;
-            loaded=true;
+        player.addEventListener('playing', () => {
+            if(!ready) {
+                const reallyLoaded = setInterval(()=>{
+                    if(player.currentTime>0){
+                        clearInterval(reallyLoaded);
+                        ready=true;
+                        loaded=true;
+                    }
+                },40)
+            }
         });
         player.play().catch(() => {
             console.log('playback failed, muting to try again');
@@ -60,7 +67,7 @@
         console.log('$page',$page)
         console.log('videoDomain',videoDomain)
         if(!videoDomain) {
-            throw 'Cloudflare Stream has not been configured. Set the "cloudflareStremDomain" property in site config.'
+            throw 'Cloudflare Stream has not been configured. Set the "cloudflareStreamDomain" property in site config.'
         }
         let uniqueId = uuidv4();
         videoRef.setAttribute('id', uniqueId)
@@ -83,6 +90,7 @@
         width: 100%;
     }
     .stream-container{
+        --i: 0;
         padding-top: calc(100% / var(--aspect-ratio));
         background-size:contain;
         background-position: center;
@@ -90,6 +98,21 @@
         --smDim: min(90svh,90svw);
         &[data-ready="false"] {
             background-color: #00000020;
+            &:after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 64px;
+                height: 64px;
+                background-image: var(--loading-graphic);
+                transform: translate(-50%, -50%);
+                background-size: contain;
+                background-repeat: no-repeat;
+                animation: rotate 6s infinite linear;
+                animation-delay: calc(-1s * var(--i));
+                mix-blend-mode: color-dodge;
+            }
         }
         .interacter {
             position: absolute;
@@ -100,7 +123,14 @@
             z-index: 1;
         }
     }
-    
+    @keyframes rotate {
+        0% {
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+        100% {
+            transform: translate(-50%, -50%) rotate(360deg);
+        }
+    }    
 
 </style>
 <!-- svelte-ignore a11y-missing-attribute -->
@@ -108,7 +138,7 @@
     use:inview
     on:inview_enter={() => play()}
     on:inview_leave={() => pause()}
-class="stream-container {cssClass}" data-ready={ready} style="position: relative; --aspect-ratio: {aspectRatio}; {mediaItem?.poster?`background-image:url(${`/projects/${mediaItem.project.year}/${mediaItem.project.slug}/media/thumb512/${mediaItem.poster.hash}.webp`});`:''}"><div class="interacter"></div><iframe
+class="stream-container {cssClass} --i: {i}" data-ready={ready} style="position: relative; --aspect-ratio: {aspectRatio}; {mediaItem?.poster?`background-image:url(${`/projects/${mediaItem.project.year}/${mediaItem.project.slug}/media/thumb512/${mediaItem.poster.hash}.webp`});`:''}"><div class="interacter"></div><iframe
 bind:this={videoRef}
   src={src}
   allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"

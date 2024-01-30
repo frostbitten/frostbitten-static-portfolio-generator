@@ -77,6 +77,21 @@ header {
 	cursor: pointer;
 }
 
+:global(article.media:not([data-ready="true"]) .player) {
+	position: relative;
+	:global(.media-placeholder) {
+		position: absolute!important;
+    	top: 0;
+	}
+}
+:global(article.media[data-ready="true"] .player .media-placeholder) {
+	display:none;
+}
+
+:global(article.media .player .fast-image:not(.ready) + .media-placeholder) {
+	display:block;
+}
+
 
 </style>
 <!-- <div class="ready" data-ready={ready}></div> -->
@@ -97,9 +112,9 @@ header {
 	{#each medias as media, i}
 		<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 			<article class="media w-full md:w-1/2 2xl:w-1/3" tabindex="0">
-				{#if i===0 || mediaLoaded[i-1]}
+				<div class="player" style="--aspect-ratio: {media.aspectRatio}"><!-- {#if i===0 || mediaLoaded[i-1]} -->
 					{#if media.mediaType === "cloudflare-stream"}
-						<CloudflareStream mediaItem={media} bind:loaded={mediaLoaded[i]}/>
+						<CloudflareStream mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
 					{:else if media.mediaType === "video"}
 						<FastVideo src="/projects/{year}/{slug}/media/{media.fileName}" bind:loaded={mediaLoaded[i]}   />
 					{:else if media.mediaType === "image"}
@@ -107,11 +122,15 @@ header {
 						<FastImage src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" bind:loaded={mediaLoaded[i]} srcFull={`/projects/${year}/${slug}/media/full/${media.hash}.${media.fullExt}`} />
 					{/if}
 					<!-- <pre>{JSON.stringify(media,null,2)}</pre> -->
-				{:else}
-					<MediaPlaceholder mediaItem={media}/>
+				<!-- {:else}
+				{/if} -->
+					<!-- <MediaPlaceholder aspectRatio={media.aspectRatio} cssClass="cover" /> -->
+				</div>
+				{#if media.title}
+					<div class="description">{media.title}</div>
 				{/if}
 				{#if media.description}
-					<span class="description">{media.description}</span>
+					<div class="description">{media.description}</div>
 				{/if}
 			</article>
 	{/each}

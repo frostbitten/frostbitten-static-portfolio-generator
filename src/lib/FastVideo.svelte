@@ -12,7 +12,7 @@
 
     onMount(()=>{
       loaded=true;
-      console.log('videoRef',videoRef)
+      // console.log('videoRef',videoRef)
       videoRef.addEventListener('loadeddata', function(e) {
           // console.log('loadeddata',e.target.duration);
           if(videoRef.duration>0)
@@ -24,11 +24,25 @@
     let videoRef: HTMLVideoElement;
     
 </script>
+<style lang="scss">
+  .fast-video {
+    &.ready {
+      .fast-video-placeholder {
+        display:none;
+      }
+    }
+    .fast-video-placeholder {
+      padding-top: calc(100% / var(--aspect-ratio));
+      position: relative;
+    }
+  }
+</style>
 <div
   use:inview
   on:inview_enter={() => videoRef.play()}
   on:inview_leave={() => videoRef.pause()}
-  class="fast-video"
+  class="fast-video {loaded?'ready':''}"
 >
 <video class="{cssClass}" muted autoplay loop src={src} bind:this={videoRef} ></video>
+<div class="fast-video-placeholder"style=""></div>
 </div>
