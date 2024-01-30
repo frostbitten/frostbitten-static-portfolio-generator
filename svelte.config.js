@@ -17,7 +17,7 @@ if(production){
 
 let entries = ['/','/projects'];
 
-Object.keys(siteData.pages).forEach(slug=>{entries.push('/'+slug)})
+Object.keys(siteData.pages).filter(n=>n!=='home').forEach(slug=>{entries.push('/'+slug)})
 siteData.projects.forEach(project=>{entries.push(`/projects/${project.year}/${project.slug}`)})
 
 console.log('page entries:',entries)

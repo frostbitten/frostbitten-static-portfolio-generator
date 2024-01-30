@@ -15,17 +15,17 @@ const watcher = chokidar.watch(folderPath, {
 
 watcher
   .on('add', async (path) => {
-    console.log(`File ${path} has been added`);
+    // console.log(`File ${path} has been added`);
     if(path.includes('!')) return;
     await executeCode(`File ${path} has been added`);
   })
   .on('change', async (path) => {
-    console.log(`File ${path} has been changed`);
+    // console.log(`File ${path} has been changed`);
     if(path.includes('!')) return;
     await executeCode(`File ${path} has been changed`);
   })
   .on('unlink', async (path) => {
-    console.log(`File ${path} has been removed`);
+    // console.log(`File ${path} has been removed`);
     if(path.includes('!')) return;
     await executeCode(`File ${path} has been removed`);
   });

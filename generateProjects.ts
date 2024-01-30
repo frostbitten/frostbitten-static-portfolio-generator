@@ -29,8 +29,12 @@ const readProjects = async (workPath:string) => {
 	const siteConfigPath = path.join(__dirname, 'work', 'config.yaml');
 	if (fs.existsSync(siteConfigPath)) {
 		const yamlContent = fs.readFileSync(siteConfigPath, 'utf8');
-		const yamlData = YAML.parse(yamlContent);
-		Object.assign(siteConfig, yamlData);
+		try {
+			const yamlData = YAML.parse(yamlContent);
+			Object.assign(siteConfig, yamlData);
+		}catch (e) {
+			console.error('Error parsing config.yaml file',e);
+		}
 	}
 	// console.log('siteConfig',siteConfig)
 
@@ -127,7 +131,6 @@ const readProjects = async (workPath:string) => {
 				}
 			};
 		}else if(workItem.name.endsWith('.md')){
-			// console.log('workitem:', workItem)
 			pages[workItem.name.split('.').slice(0,-1).join('.')] = fs.readFileSync(path.join(workItem.path,workItem.name), { encoding: 'utf8', flag: 'r' });
 		}
 	}
@@ -153,7 +156,7 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 	mediaItem.fileType = fileType;
 	const mimeType = mime.lookup(fileType)
 	if(!mimeType) return;
-	console.log('mimeType',mimeType)
+	// console.log('mimeType',mimeType)
 	mediaItem.mimeType = mimeType;
 	const mediaType = mimeType.split('/')[0]
 	mediaItem.mediaType = mediaType;
@@ -168,7 +171,7 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 	}
 
 	if(mediaFile.endsWith('.cfstream.json')){
-		console.log('handle cfstream')
+		// console.log('handle cfstream')
 		const mediaInfo = JSON.parse(fs.readFileSync(mediaFullPath, 'utf-8'));
 		// console.log('cfstream mediaInfo: ',mediaInfo)
 		const { type:mimeType, name:fileName } = mediaInfo.meta;
@@ -287,12 +290,15 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 const buildSiteData = async function () {
 	console.log('Building Site Data');
 	// console.log("~~~~~~~~~~~~~~~~~~~~~~~~~");
-
-	// await new Promise((res)=>{setTimeout(function(){res(true)},1000)})
-
-	// Start reading projects from the root
-	// const {siteConfig, projects, years, keywords} = await readProjects(workPath);
-	const siteData = await readProjects(workPath);
+	
+	let siteData:any = {};
+	try {
+		siteData = await readProjects(workPath);
+	} catch (error) {
+		console.error('Error reading projects',error);
+		console.log('FAILED rebuilding site data')
+		return;
+	}
 
 	// Write the projects array to a JavaScript file
 	const outputPath = path.join(__dirname, 'data/siteData.js');
