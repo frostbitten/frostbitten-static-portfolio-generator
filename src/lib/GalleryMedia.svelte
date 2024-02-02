@@ -40,6 +40,9 @@
                 cfPlayer.controls = false;
                 placeHolder.remove();
                 cfPlayer=null;
+            }else if(popupContainer.getAttribute('media-type') === 'youtube-stream'){
+                currentMedia.classList.remove('pop-out');
+                placeHolder.remove();
             }else{
                 popupContainer.querySelector('.cover')?.remove();
             }
@@ -55,7 +58,7 @@
         return (e)=>{
             console.log('open media',el,i)
             if(mediaOpenI===i) return;
-            currentMedia = el.querySelectorAll('video,img,.stream-container')[0]
+            currentMedia = el.querySelectorAll('video,img,.stream-container,.youtube-container')[0]
             if(!currentMedia) return;
             mediaOpenI=i;
             console.log('open media',currentMedia)
@@ -75,15 +78,18 @@
             }else
             if(currentMedia instanceof HTMLImageElement){
                 const fullSrc = currentMedia.getAttribute('data-full');
+                const aspectRatio = currentMedia.getAttribute('data-aspect-ratio');
                 if(!fullSrc) return;
                 if(!fullSizeMediaCache?.[fullSrc]){
                     fullSizeMediaCache[fullSrc] = document.createElement('img');
                     fullSizeMediaCache[fullSrc].classList.add('cover');
+                    fullSizeMediaCache[fullSrc].classList.add(aspectRatio>1?'hz':'vt');
                     fullSizeMediaCache[fullSrc].src = fullSrc;
+                    fullSizeMediaCache[fullSrc].style.setProperty('--aspect-ratio',aspectRatio);
                 }
                 popupContainer.setAttribute('media-type','image')
                 popupContainer.appendChild(fullSizeMediaCache?.[fullSrc]);
-            }else if(currentMedia.classList.contains('stream-container')){ //assume image
+            }else if(currentMedia.classList.contains('stream-container')){
                 placeHolder.setAttribute('style',`width:${mediaSize.width}px;height:${mediaSize.height}px`);
                 mediaOrigin?.appendChild(placeHolder);
                 currentMedia.classList.add('pop-out');
@@ -96,6 +102,12 @@
                     cfPlayer.muted = false;
                     // console.log('open player',playerEl,cfPlayer)
                 })
+            } if(currentMedia.classList.contains('youtube-container')){
+                console.log('open youtube',currentMedia)
+                placeHolder.setAttribute('style',`width:${mediaSize.width}px;height:${mediaSize.height}px`);
+                mediaOrigin?.appendChild(placeHolder);
+                currentMedia.classList.add('pop-out');
+                popupContainer.setAttribute('media-type','youtube-stream')
             }
             popupOpen=true;
         }
@@ -107,7 +119,8 @@
         // console.log('parentContainer',parentContainer)
         mediaEls = parentContainer.querySelectorAll('.media');
         placeHolder = document.createElement('div');
-        placeHolder.classList.add('media-placeholder')
+        window.placeHolder = placeHolder;
+        placeHolder.classList.add('media-popout-placeholder')
         console.log('got mediaEls',mediaLoaded,mediaEls)
         function processMedia(){
             // mediaEls.forEach((el,i)=>{
@@ -178,19 +191,23 @@
     :global(.medias:not([data-media-open-i="-1"])) .cover {
         display:none;
     }
-    :global(.media-placeholder){
+    :global(.media-popout-placeholder){
         background-color: rgb(187 15 113);
     }
     
-    :global(.stream-container ~ .close-popup-button){
+    :global(.stream-container ~ .close-popup-button),
+    :global(.youtube-container ~ .close-popup-button)
+    {
         display:none
     }
-    :global(.stream-container.pop-out ~ .close-popup-button){
+    :global(.stream-container.pop-out ~ .close-popup-button),
+    :global(.youtube-container.pop-out ~ .close-popup-button){
         display:block;
         position: fixed !important;
     }
     
-    :global(.stream-container.pop-out){
+    :global(.stream-container.pop-out),
+    :global(.youtube-container.pop-out){
         position: fixed !important;
         padding-top: 0!important;
         z-index: 2;
@@ -205,56 +222,15 @@
         }
     }
 
-    /* :global(.medias) {
-        &[data-media-open-i="0"] :global(.media:nth-child(1) > div),
-        &[data-media-open-i="1"] :global(.media:nth-child(2) > div),
-        &[data-media-open-i="2"] :global(.media:nth-child(3) > div),
-        &[data-media-open-i="3"] :global(.media:nth-child(4) > div),
-        &[data-media-open-i="4"] :global(.media:nth-child(5) > div),
-        &[data-media-open-i="5"] :global(.media:nth-child(6) > div),
-        &[data-media-open-i="6"] :global(.media:nth-child(7) > div),
-        &[data-media-open-i="7"] :global(.media:nth-child(8) > div),
-        &[data-media-open-i="8"] :global(.media:nth-child(9) > div),
-        &[data-media-open-i="9"] :global(.media:nth-child(10) > div),
-        &[data-media-open-i="10"] :global(.media:nth-child(11) > div),
-        &[data-media-open-i="11"] :global(.media:nth-child(12) > div),
-        &[data-media-open-i="12"] :global(.media:nth-child(13) > div),
-        &[data-media-open-i="13"] :global(.media:nth-child(14) > div),
-        &[data-media-open-i="14"] :global(.media:nth-child(15) > div),
-        &[data-media-open-i="15"] :global(.media:nth-child(16) > div),
-        &[data-media-open-i="16"] :global(.media:nth-child(17) > div),
-        &[data-media-open-i="17"] :global(.media:nth-child(18) > div)
-         {
-            // position: fixed;
-            // background: #000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            :global(.cover) {
-                max-height: 90svh;
-                max-width: 90svw;
-                margin: auto;
-            }
-        }
-    } */
-
     button.close-popup-button {
         position: fixed;
         right: 5svh;
         top: 2.5svh;
         z-index: 4;
+        color: #fff;
+        text-shadow: 0 0 0.25em #000;
     }
     .popup {
-        
-        // position: fixed;
-        // height: 90svh;
-        // width: 90svw;
-        // bottom: 5svh;
-        // left: 50%;
-        // transform: translateX(-50%);
-        // z-index: 1;
-        // isolation: isolate;
         
         .bg {
             position: fixed;
@@ -267,15 +243,6 @@
         }
         
         .popup-media {
-            // position: absolute;
-            // // max-height: 90svh;
-            // // max-width: 90svw;
-            // height: 90svh;
-            // width: 90svw;
-            // top: 5svh;
-            // left: 50%;
-            // z-index: 1;
-            // transform: translateX(-50%);
             
             position: fixed;
             top: 50%;
@@ -283,6 +250,16 @@
             transform: translate(-50%,-50%);
             z-index: 2;
 
+            // --width: min(var(--smDim), var(--smDim)* var(--aspect-ratio));
+            // width: var(--width);
+            // height: calc(var(--width) / var(--aspect-ratio));
+
+            :global(> .cover.vt) {
+                min-height: min(1080px,50svh);
+            }
+            :global(> .cover.hz) {
+                min-width: min(1080px,50svw);
+            }
             :global(> .cover) {
                 position: absolute;
                 left: 50%;

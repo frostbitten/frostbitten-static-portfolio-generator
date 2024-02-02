@@ -91,7 +91,6 @@
         background-size:contain;
         background-position: center;
         isolation: isolate;
-        --smDim: min(90svh,90svw);
         &[data-ready="false"] {
             background-color: #00000020;
             // &:after {

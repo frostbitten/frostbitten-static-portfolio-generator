@@ -7,8 +7,14 @@ import ffprobeStatic from 'ffprobe-static';
 import mime from 'mime-types'
 import webp from 'webp-converter'
 import sharp from 'sharp'
-
+import pLimit from 'p-limit';
+import os from 'os'
 import CRC32C from 'crc-32'
+
+
+const numCpuThreads = os.cpus().length;
+const threadsToUse = Math.max(1,Math.floor(numCpuThreads/2));
+const limit = pLimit(threadsToUse);
 
 const __filename = fileURLToPath(import.meta.url); 
 const __dirname = path.dirname(__filename);
@@ -138,7 +144,50 @@ const readProjects = async (workPath:string) => {
 };
 let knownDirs:string[] = [];
 async function processMediaFile(mediaFile:string, mediaPath:string){
-	const thumbnailSizes = [288,512];
+	// const thumbnailSizes = [144,288,512];
+	const thumbnailSizes = [
+		{
+			size:144,
+			folder:'thumb144',
+			quality: 69,
+			minQuality: 33,
+			maxFileSize: 0.2, //MB
+			qualityStep: 9,
+		},
+		{
+			size:288,
+			folder:'thumb288',
+			quality: 69,
+			minQuality: 39,
+			maxFileSize: 0.8, //MB
+			qualityStep: 6,
+		},
+		{
+			size:512,
+			folder:'thumb512',
+			quality: 69,
+			minQuality: 33,
+			maxFileSize: 2, //MB
+			qualityStep: 9,
+		},
+		{
+			size:512,
+			folder:'thumb512_sm',
+			quality: 22,
+			minQuality: 10,
+			maxFileSize: 1, //MB
+			qualityStep: 3,
+		},
+		{
+			size:512,
+			folder:'thumb512_still',
+			still: true,
+			quality: 78,
+			minQuality: 24,
+			maxFileSize: 0.06, // MB
+			qualityStep: 9,
+		},
+	];
 	const fileName = mediaFile;
 	const mediaItem:any = {
 		fileName,
@@ -240,73 +289,131 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 		});
 	}
 	else if(mediaType==="image"){
-		const animated = fileType==="gif"
-		let sharpOptions:any;
-		if(animated) sharpOptions = { animated, pages: -1 };
-		
-		const sharpImageBase = sharp(mediaFullPath, sharpOptions) // supports animated gif and webp images
-		const imageMeta = await sharpImageBase.metadata()
-		// console.log('got metadata',imageMeta)
-		const {width, height, pageHeight} = imageMeta;
-		setMediaSize(mediaItem,width,pageHeight??height)
-		
-		let destinationPath, destinationPathAlt;
+			const animated = fileType==="gif"
+			if(animated) mediaItem.animated = true;
+			let sharpOptions:any;
+			if(animated) sharpOptions = { animated, pages: -1 };
+			
+			const sharpImageBase = sharp(mediaFullPath, sharpOptions) // supports animated gif and webp images
+			let sharpStillImageBase = sharp(mediaFullPath, { animated: false })
+			const imageMeta = await sharpImageBase.metadata()
+			// console.log('got metadata',imageMeta)
+			const {width, height, pageHeight} = imageMeta;
+			setMediaSize(mediaItem,width,pageHeight??height)
+
+			mediaItem.thumbs = {};
+			[{folder:'full'}].concat(thumbnailSizes).forEach((size)=>{
+				mediaItem.thumbs[size.folder] = {}
+			})
+			
+			let destinationPath, destinationPathAlt;
 
 
-		if(!knownDirs.find(dir=>dir.indexOf(staticFolder)===0)){//not sure of exists
-			if(fs.existsSync(path.join(staticFolder,'full'))){
-			}else{
-				fs.mkdirSync(path.join(staticFolder,'full'), { recursive: true });
-				thumbnailSizes.forEach(size=>{
-					fs.mkdirSync(path.join(staticFolder,`thumb${size}`), { recursive: true });
+			if(!knownDirs.find(dir=>dir.indexOf(staticFolder)===0)){//not sure of exists
+				[{folder:'full'}].concat(thumbnailSizes).forEach(thumb=>{
+					if(fs.existsSync(path.join(staticFolder,thumb.folder))) return;
+					fs.mkdirSync(path.join(staticFolder,thumb.folder), { recursive: true });
 				})
+				knownDirs.push(staticFolder);
 			}
-			knownDirs.push(staticFolder);
-		}
 
-		for(let size of thumbnailSizes){
-			destinationPath = path.join(staticFolder,`thumb${size}`,`${hash}.webp`)
-			destinationPathAlt = path.join(staticFolder,`thumb${size}`,`${hash}.${fileType}`)
-			if(!fs.existsSync(destinationPath) && !fs.existsSync(destinationPathAlt)){
-				console.log(`generating optimized ${size}px thumbnail. `+mediaItem.baseName);
-				await new Promise(async (res)=>{
-					const sharpImage = sharpImageBase.clone()
-					let { pages } = imageMeta;
-					if(!pages) pages = 1;
-					const resized = sharpImage.resize({
-						width: size,
-						height: size * pages,
-						fit: sharp.fit.inside
-					})
-					resized.webp({ quality: 69 }).toFile(destinationPath).then(()=>{
+			let thumbTasks:any[] = [];
+
+			for(let thumb of thumbnailSizes){
+				const size = thumb.size;
+				const thumbFolder = thumb.folder;
+				const quality = thumb?.quality || 69;
+				const still = thumb?.still || false;
+				if(still && !animated) continue;
+				thumbTasks.push(()=>{
+					return new Promise(async (res)=>{
+						const destinationPath = path.join(staticFolder,thumbFolder,`${hash}.webp`)
+						const destinationPathAlt = path.join(staticFolder,thumbFolder,`${hash}.${fileType}`)
+						if(!fs.existsSync(destinationPath) && !fs.existsSync(destinationPathAlt)){
+							console.log(`generating optimized ${size}px thumbnail. `+mediaItem.baseName);
+							// await new Promise(async (res)=>{
+								const baseImage = still?sharpStillImageBase:sharpImageBase;
+								const sharpImage = baseImage.clone()
+								let { pages } = imageMeta;
+								if(!pages) pages = 1;
+								// const thumbPages = still?1:pages;
+								if(still) pages = 1;
+								const resized = sharpImage.resize({
+									width: size,
+									height: size * pages,
+									fit: sharp.fit.inside
+								})
+								const qualityStep = thumb?.qualityStep || 3;
+								const minQuality = thumb?.minQuality || quality;
+								const maxFileSize = thumb?.maxFileSize || Infinity;
+								let crunches = 0;
+								let qualityStepFactor = 1;
+								let fileData;
+								for(let q = quality; q>=minQuality; q-=qualityStep*qualityStepFactor){
+									qualityStepFactor = 1;
+									crunches++;
+									if(minQuality!==quality) console.log(`try to crunch ${size}px thumbnail below ${maxFileSize} using quality ${q}`);
+
+									const crunch = resized.clone();						
+									await crunch.webp({
+										quality: q,
+										minSize: true,
+										mixed: true,
+										// effort: 5,
+									}).toFile(destinationPath)
+									fileData = fs.statSync(destinationPath);
+									if(fileData.size < maxFileSize*1024*1024) break;
+									if(crunches===1 && fileData.size > 2*maxFileSize*1024*1024) { //if first try is too big, try to reduce quality faster
+										qualityStepFactor = 2;
+									}
+								}
+								mediaItem.thumbs[thumbFolder].size = fileData.size;
+							// 	res(true);
+							// });
+							console.log(`thumbnail generated for ${mediaItem.baseName}: ${thumbFolder} `);
+						}else{
+							let currentPath = fs.existsSync(destinationPath)?destinationPath:destinationPathAlt;
+							const fileData = fs.statSync(currentPath);
+							mediaItem.thumbs[thumbFolder].size = fileData.size;
+						}
 						res(true);
-					})
+					});
 				});
 			}
-		}
-		destinationPath = path.join(staticFolder,`full`,`${hash}.webp`)
-		destinationPathAlt = path.join(staticFolder,`full`,`${hash}.${fileType}`)
-		if(!fs.existsSync(destinationPath) && !fs.existsSync(destinationPathAlt)){
-			console.log('generating optimized full. '+mediaItem.baseName);
-			await new Promise(async (res)=>{
-				const sharpImage = sharpImageBase.clone()
-				sharpImage.webp({ lossless: true }).toFile(destinationPath).then(()=>{
-					const ogFileData = fs.statSync(mediaFullPath);
-					const webpFileData = fs.statSync(destinationPath);
-					if(webpFileData.size > ogFileData.size){
-						fs.unlinkSync(destinationPath)
-						fs.copyFileSync(mediaFullPath,destinationPathAlt)
+			thumbTasks.push( ()=>{
+				return new Promise(async (res)=>{
+					const destinationPath = path.join(staticFolder,`full`,`${hash}.webp`)
+					const destinationPathAlt = path.join(staticFolder,`full`,`${hash}.${fileType}`)
+					if(!fs.existsSync(destinationPath) && !fs.existsSync(destinationPathAlt)){
+						console.log('generating optimized full. '+mediaItem.baseName);
+						await new Promise(async (res)=>{
+							const sharpImage = sharpImageBase.clone()
+							sharpImage.webp({ lossless: true }).toFile(destinationPath).then(()=>{
+								const ogFileData = fs.statSync(mediaFullPath);
+								const webpFileData = fs.statSync(destinationPath);
+								if(webpFileData.size > ogFileData.size){
+									fs.unlinkSync(destinationPath)
+									fs.copyFileSync(mediaFullPath,destinationPathAlt)
+								}
+								res(true);
+							})
+						});
+						console.log(`thumbnail generated for ${mediaItem.baseName}: full `);
+					}else{
+						let currentPath = fs.existsSync(destinationPath)?destinationPath:destinationPathAlt;
+						const fileData = fs.statSync(currentPath);
+						mediaItem.thumbs['full'].size = fileData.size;
+					}
+					if(fs.existsSync(destinationPath)){
+						mediaItem.fullExt = "webp"
+					}else if(fs.existsSync(destinationPathAlt)){
+						mediaItem.fullExt = fileType
 					}
 					res(true);
 				})
-			});
-		}
-		
-		if(fs.existsSync(destinationPath)){
-			mediaItem.fullExt = "webp"
-		}else if(fs.existsSync(destinationPathAlt)){
-			mediaItem.fullExt = fileType
-		}
+			})
+
+			await Promise.all(thumbTasks.map(task => limit(task)));
 	}
 
 	return mediaItem;

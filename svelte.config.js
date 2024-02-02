@@ -5,6 +5,8 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import siteData from './data/siteData.js'
 // import { dev } from '$app/environment';
 // console.log('config env',process.env)
+// import sveltePreprocess from 'svelte-preprocess';
+
 const dev = process.env.NODE_ENV === 'development';
 const production = process.env.NODE_ENV === 'production';
 let adapterOpts = {}

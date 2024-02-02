@@ -15,7 +15,7 @@
 	// let pageData;
 	// console.log('pageData',pageData)
 
-	let mediaLoaded=[];
+	let mediaLoaded:any[]=[];
 
 	$: year = $page.params.year;
 	$: slug = $page.params.projectSlug;
@@ -82,13 +82,9 @@ header {
 	cursor: pointer;
 }
 
-:global(article.media .player) {
-	max-height: calc(var(--max-size) / var(--aspect-ratio));
-	max-width: calc(var(--max-size) * var(--aspect-ratio));
-}
-
 :global(article.media:not([data-ready="true"]) .player) {
 	position: relative;
+
 	:global(.media-placeholder) {
 		position: absolute!important;
     	top: 0;
@@ -121,32 +117,32 @@ header {
 	<GalleryMedia length={project.medias.length} {mediaLoaded}>
 	{#each medias as media, i}
 		<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
-			<article class="media w-full md:w-1/2 2xl:w-1/3" tabindex="0">
-				<div class="player" style="--aspect-ratio: {media.aspectRatio}"><!-- {#if i===0 || mediaLoaded[i-1]} -->
-					{#if media.mediaType === "cloudflare-stream"}
-						<CloudflareStream mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
-					{:else if media.mediaType === "youtube"}
-						<YoutubeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
-					{:else if media.mediaType === "iframe"}
-						<IframeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
-					{:else if media.mediaType === "video"}
-						<FastVideo src="/projects/{year}/{slug}/media/{media.fileName}" bind:loaded={mediaLoaded[i]}   />
-					{:else if media.mediaType === "image"}
-						<!-- <img src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" data-full="/projects/{year}/{slug}/media/full/{media.hash}.{media.fullExt}"> -->
-						<FastImage src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" bind:loaded={mediaLoaded[i]} srcFull={`/projects/${year}/${slug}/media/full/${media.hash}.${media.fullExt}`} />
-					{/if}
-					<!-- <pre>{JSON.stringify(media,null,2)}</pre> -->
-				<!-- {:else}
-				{/if} -->
-					<!-- <MediaPlaceholder aspectRatio={media.aspectRatio} cssClass="cover" /> -->
-				</div>
-				{#if media.title}
-					<div class="description">{media.title}</div>
+		<article class="media w-full md:w-1/2 2xl:w-1/3" tabindex="0">
+			<div class="player" style="--aspect-ratio: {media.aspectRatio}" data-media-type={media.mediaType}><!-- {#if i===0 || mediaLoaded[i-1]} -->
+				{#if media.mediaType === "cloudflare-stream"}
+					<CloudflareStream mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
+				{:else if media.mediaType === "youtube"}
+					<YoutubeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
+				{:else if media.mediaType === "iframe"}
+					<IframeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
+				{:else if media.mediaType === "video"}
+					<FastVideo cssClass="cover" src="/projects/{year}/{slug}/media/{media.fileName}" bind:loaded={mediaLoaded[i]}   />
+				{:else if media.mediaType === "image"}
+					<!-- <img src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" data-full="/projects/{year}/{slug}/media/full/{media.hash}.{media.fullExt}"> -->
+					<FastImage aspectRatio={media.aspectRatio} src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" bind:loaded={mediaLoaded[i]} srcFull={`/projects/${year}/${slug}/media/full/${media.hash}.${media.fullExt}`} />
 				{/if}
-				{#if media.description}
-					<div class="description">{media.description}</div>
-				{/if}
-			</article>
+				<!-- <pre>{JSON.stringify(media,null,2)}</pre> -->
+			<!-- {:else}
+			{/if} -->
+				<!-- <MediaPlaceholder aspectRatio={media.aspectRatio} cssClass="cover" /> -->
+			</div>
+			{#if media.title}
+				<div class="description">{media.title}</div>
+			{/if}
+			{#if media.description}
+				<div class="description">{media.description}</div>
+			{/if}
+		</article>
 	{/each}
 	</GalleryMedia>
 </div>

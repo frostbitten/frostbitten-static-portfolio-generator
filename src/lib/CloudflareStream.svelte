@@ -95,24 +95,8 @@
         background-size:contain;
         background-position: center;
         isolation: isolate;
-        --smDim: min(90svh,90svw);
         &[data-ready="false"] {
             background-color: #00000020;
-            &:after {
-                content: '';
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: 64px;
-                height: 64px;
-                background-image: var(--loading-graphic);
-                transform: translate(-50%, -50%);
-                background-size: contain;
-                background-repeat: no-repeat;
-                animation: rotate 6s infinite linear;
-                animation-delay: calc(-1s * var(--i));
-                mix-blend-mode: color-dodge;
-            }
         }
         .interacter {
             position: absolute;

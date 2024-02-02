@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-    import { onMount, beforeUpdate, afterUpdate } from 'svelte';
+    import { onMount, beforeUpdate, afterUpdate, tick, onDestroy } from 'svelte';
     import { browser } from '$app/environment';
 
     import { inview } from 'svelte-inview';
@@ -8,41 +8,77 @@
 
 	  export let src;
 	  export let loaded;
-    let cssClass:string = ""
-
-    onMount(()=>{
-      loaded=true;
-      // console.log('videoRef',videoRef)
-      videoRef.addEventListener('loadeddata', function(e) {
-          // console.log('loadeddata',e.target.duration);
-          if(videoRef.duration>0)
-            loaded=true;
-      });
-    })
+    export let cssClass:string = ""
 
     let isInView: boolean;
     let videoRef: HTMLVideoElement;
+    let show: boolean = false;
+
+    const checkVideoLoaded = (e) => {
+        // console.log('loadeddata',{duration:videoRef.duration,readyState:videoRef.readyState});
+        if(videoRef && videoRef.duration>0 && videoRef.readyState>2){
+          loaded=true;
+          removeListeners();
+        }
+    }
+    const removeListeners = ()=>{
+      if(videoRef){
+          videoRef.removeEventListener('loadeddata', checkVideoLoaded);
+          videoRef.removeEventListener('play', checkVideoLoaded);
+          videoRef.removeEventListener('volumechange', checkVideoLoaded);
+          videoRef.removeEventListener('progress', checkVideoLoaded);
+      }
+    }
+
+    onDestroy(()=>{
+        removeListeners();
+    })
+
+    const readyVideo = async ()=>{
+      if(!show){
+          show=true;
+          await tick();
+          if(videoRef.duration>0 && videoRef.readyState>2){
+                loaded=true;
+          }else{
+            videoRef.addEventListener('loadeddata', checkVideoLoaded);
+            videoRef.addEventListener('play', checkVideoLoaded);
+            videoRef.addEventListener('volumechange', checkVideoLoaded);
+            videoRef.addEventListener('progress', checkVideoLoaded);
+          }
+      }
+      videoRef.play()
+    }
+
+    onMount(()=>{
+    })
     
 </script>
 <style lang="scss">
   .fast-video {
-    &.ready {
-      .fast-video-placeholder {
-        display:none;
-      }
-    }
+    position: relative;
     .fast-video-placeholder {
       padding-top: calc(100% / var(--aspect-ratio));
       position: relative;
+      background-color: #00000020;
+    }
+    video { display: none }
+
+    &.ready {
+      position: static;
+      .fast-video-placeholder {
+        display:none;
+      }
+      video { display: block }
     }
   }
 </style>
 <div
   use:inview
-  on:inview_enter={() => videoRef.play()}
-  on:inview_leave={() => videoRef.pause()}
-  class="fast-video {loaded?'ready':''}"
+  on:inview_enter={() => {readyVideo()}}
+  on:inview_leave={() => videoRef?.pause()}
+  class="fast-video {loaded?'ready':''} {show?'show':''}"
 >
-<video class="{cssClass}" muted autoplay loop src={src} bind:this={videoRef} ></video>
+{#if show}<video class="{cssClass}" muted autoplay loop src={src} bind:this={videoRef} ></video>{/if}
 <div class="fast-video-placeholder"style=""></div>
 </div>

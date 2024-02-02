@@ -5,6 +5,7 @@
     import FastVideo from '$lib/FastVideo.svelte'
     import CloudflareStream from '$lib/CloudflareStream.svelte'
     import FastImage from '$lib/FastImage.svelte';
+    import FastImageMedia from '$lib/FastImageMedia.svelte';
 
     // console.log('page load')
 	$: siteData = $page.data.siteData;
@@ -107,11 +108,12 @@
                 width: 15em;
                 padding: 0 1px;
             }
+            margin-right: 1em;
         }
         .review-filter {
             display: flex;
             align-items: self-end;
-            padding-left: 1em;
+            // padding-left: 1em;
             input {
                 font-size: 3em;
                 color:#00000045;
@@ -126,7 +128,7 @@
 <div class="ready" data-status={ready}></div>
 <h1>Projects</h1>
 <div class="filter">
-    <div class="flex filter-inputs">
+    <div class="flex flex-wrap filter-inputs">
         <div class="write-filter">
             <span>Filter</span>
             <input type="text" bind:value={filter} name="filter" on:change={updateFilter} on:keyup={updateFilter} placeholder="(year, software, technique, title)">
@@ -161,7 +163,7 @@
                         <FastVideo src={`/projects/${project.year}/${project.slug}/media/${project.cover.fileName}`} />
                     {:else}
                         <!-- <img src="/projects/{project.year}/{project.slug}/media/thumb512/{project.cover.hash}.webp" alt=""> -->
-                        <FastImage preload={false&&projectI<4} lazy={true} src="/projects/{project.year}/{project.slug}/media/thumb512/{project.cover.hash}.webp" alt="" />
+                        <FastImageMedia mediaItem={project.cover} />
                     {/if}
                 {/if}
             </div>

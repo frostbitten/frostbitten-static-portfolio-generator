@@ -5,15 +5,26 @@
 :root{
     --loading-graphic: none;
     --max-size: min(95svh,95svw);
+    --scrollbar-width: 0px;
+    --smDim: min(90svh,90svw);
+    --aspect-ratio: 1;
+}
+html {
+    // scrollbar-gutter: stable;
+    overflow-x: hidden;
 }
 body {
     // background-color: #676176;
     background-color: #eee;
+    padding-right: var(--scrollbar-width);
+    width: 100vw;
+    overflow-x: hidden;
 }
 h1 {
     font-size: 2.5rem;
     margin-left: -0.06em;
     line-height: 0.9em;
+    margin-bottom: 0.5rem;
 }
 .medias {
     display:flex;
@@ -40,27 +51,101 @@ h1 {
 main {
     // background-color: #00000091;
     // color: #ffffffa6;
+    h1 {
+        font-size: 2em;
+        // font-weight: bold;
+    }
+    h2 {
+        font-size: 1.6rem;
+        margin-bottom: 0.5rem;
+    }
+    h3 {
+        font-size: 1.25rem;
+    }
     margin: 1em 0 0;
     p {
-        margin: 1em 0;
+        margin: 1em 0 0;
+        + :is(h1,h2,h3,h4,h5,h6) {
+            margin-top: 0.5em
+        }
+    }
+    h1,h2,h3,h4,h5,h6 {
+        + p {
+            margin: 0.25rem 0 0;
+        }
     }
     a:not(.keyword) {
         color: #d6007a;
         // text-shadow: 1px 1px 1px #ff00912b;
     }
+    ul, ol {
+        margin: 0.5em 0;
+        padding-left: 1em;
+        li {
+            margin: 0.5em 0;
+        }
+    }
+    ul {
+        list-style-type: disc;
+    }
+
+    blockquote {
+        margin: 1em 0;
+        padding-left: 1em;
+        border-left: 3px solid #d6007a;
+    }
+
+}
+
+
+
+
+.stream-container[data-ready="false"]:after,
+.fast-video:not(.ready):after,
+.fast-image-placeholder:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 64px;
+    height: 64px;
+    background-image: var(--loading-graphic);
+    transform: translate(-50%, -50%);
+    background-size: contain;
+    background-repeat: no-repeat;
+    animation: rotate 6s infinite linear;
+    animation-delay: calc(-1s * var(--i));
+    mix-blend-mode: color-dodge;
 }
 
 .bg-cover {
     display: block;
     width: 100%;
-    image-rendering: pixelated;
-    position: fixed;
+    // position: fixed; // "fixed" breaks pixelated rendering on safari
+    position: absolute;
     z-index: -1;
     top: 0;
     left: 0;
     height: 100%;
     object-fit: cover;
     object-position: center;
+
+    image-rendering:optimizeSpeed;             /* Legal fallback */
+    image-rendering:-moz-crisp-edges;          /* Firefox        */
+    image-rendering:-o-crisp-edges;            /* Opera          */
+    image-rendering:-webkit-optimize-contrast; /* Safari         */
+    image-rendering:optimize-contrast;         /* CSS3 Proposed  */
+    image-rendering:crisp-edges;               /* CSS4 Proposed  */
+    image-rendering:pixelated;                 /* CSS4 Proposed  */
+    -ms-interpolation-mode:nearest-neighbor;   /* IE8+           */
+}
+
+article.media .player {
+	max-height: calc(var(--max-size) / var(--aspect-ratio));
+    max-width: calc(var(--max-size) * var(--aspect-ratio));
+    &[data-media-type="image"] {
+        max-width: 512px;
+    }
 }
 
 .projects {
@@ -73,8 +158,10 @@ main {
         filter: drop-shadow(2px 2px 2px #00000022);
         header {
             display: inline-block;
-            .title{
+            width: 100%;
+            .title {
                 display: inline-block;
+                max-width: calc(100% - 4em);
                 color: #fff;
                 background: #000;
                 padding-right: 0.5em;

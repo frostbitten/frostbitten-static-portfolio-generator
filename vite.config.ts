@@ -72,6 +72,7 @@ export default ({ mode }) => {
 					console.log('Clearing old build files.')
 					glob(path.join(__dirname,'build/**/*'), (err, files) => {
 						for(let filePath of files){
+							if(filePath.includes('.git')) continue;
 							// console.log(`Processing file: ${filePath}`);
 							const relativePath = path.normalize(path.relative(path.join(__dirname,'build'),filePath))
 							// console.log(`               : ${relativePath}`);
