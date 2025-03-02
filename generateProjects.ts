@@ -175,7 +175,7 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 			folder:'thumb512_sm',
 			quality: 22,
 			minQuality: 10,
-			maxFileSize: 1, //MB
+			maxFileSize: 2, //MB
 			qualityStep: 3,
 		},
 		{
@@ -184,7 +184,7 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 			still: true,
 			quality: 78,
 			minQuality: 24,
-			maxFileSize: 0.06, // MB
+			maxFileSize: 0.1, // MB
 			qualityStep: 9,
 		},
 	];
