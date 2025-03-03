@@ -255,10 +255,10 @@
             // height: calc(var(--width) / var(--aspect-ratio));
 
             :global(> .cover.vt) {
-                min-height: min(1080px,80svh);
+                min-height: min(1080px,80svh,80svw);
             }
             :global(> .cover.hz) {
-                min-width: min(1080px,80svw);
+                min-width: min(1080px,80svw,80svh);
             }
             :global(> .cover) {
                 position: absolute;

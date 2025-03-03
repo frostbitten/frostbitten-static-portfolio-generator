@@ -6,11 +6,25 @@
     import CloudflareStream from '$lib/CloudflareStream.svelte'
     import FastImage from '$lib/FastImage.svelte';
     import FastImageMedia from '$lib/FastImageMedia.svelte';
+    import { writable } from 'svelte/store';
+
+    import { tick } from 'svelte';
+
+    function fullTick(){
+        return new Promise(async (resolve)=>{
+            await tick();
+            setTimeout(()=>{
+                resolve(true);
+            },0)
+        })
+    }
 
     // console.log('page load')
 	$: siteData = $page.data.siteData;
 	// $: projects = $page.data.siteData.projects.sort((a,b)=>b.year-a.year);
 	$: projects = $page.data.projects
+
+    const filteredProjects = writable([]);
     let ready = false;
     let filter = "";
     if(browser && window.location.hash.startsWith("#search:")) {
@@ -20,11 +34,14 @@
     let preFabFilters = ['Commercial', 'Personal', 'Blender', '3D', 'Animation', ]
     let updateHashTimeout = setTimeout(()=>{})
     $: allowAutoFilterUpdate = true;
-    $: updateFilter = (newFilter:any=null)=>{
+    const updateFilter = async (newFilter:any=null)=>{
         allowAutoFilterUpdate = false;
         // console.log('called updateFilter')
         if(newFilter!==null && typeof newFilter === "string") filter = newFilter;
         filterWords = filter.toLowerCase().trim().split(/\s+/)
+        $filteredProjects = []; // we reset and force an update to prevent project cover images from not changing
+        await fullTick();
+        $filteredProjects = projects.filter(doFilterWords);
         clearTimeout(updateHashTimeout);
         updateHashTimeout = setTimeout(()=>{
             const hash = (filterWords.length===0||filterWords[0]==="") ? "" : "search:"+filterWords.join(' ')
@@ -32,7 +49,9 @@
             allowAutoFilterUpdate = true;
         },300)
     }
-    $: doFilterWords = (project) => {
+
+    // $: doFilterWords = (project) => {
+    const doFilterWords = (project) => {
         if(filterWords.length===0||filterWords[0]==="") return true
         for( let testWord of filterWords ){
             if(project?.title && project.title.toLowerCase().includes(testWord)) continue;
@@ -45,7 +64,7 @@
         }
         
         return true;
-    }
+    };
 
     let lastLoc = ''
     beforeUpdate(()=>{
@@ -76,6 +95,8 @@
         ready=true;
         // window.addEventListener("hashchange", (event) => {
         window.addEventListener("popstate", checkHashUpdate);
+
+        console.log('mounted',{projects})
 
         // let checkForEmptyHash = setInterval(()=>{
         //     console.log('check for empty hash',filter,window.location.hash.length)
@@ -145,7 +166,8 @@
     <!-- <pre>{JSON.stringify(filterWords)}</pre> -->
 </div>
 <section class="projects flex flex-wrap">
-    {#each projects.filter(doFilterWords) as project, projectI}
+    <!-- {#each projects.filter(doFilterWords) as project, projectI} -->
+    {#each $filteredProjects as project, projectI}
         <article class="w-full md:w-6/12 project">
             <header>
                 <a class="project-link-header" href="/projects/{project.year}/{project.slug}">
@@ -155,6 +177,7 @@
             </header>
             <div class="cover">
                 {#if project.cover}
+                    <!-- {project.cover.fileName} -->
                     {#if project.cover.mediaType === "cloudflare-stream"}
                         <CloudflareStream mediaItem={project.cover} />
                     {:else if project.cover.mediaType === "video"}

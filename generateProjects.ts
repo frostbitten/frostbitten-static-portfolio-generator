@@ -1,4 +1,5 @@
-import fs from 'fs'
+// import fs from 'fs'
+import fs from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url';
 import YAML from 'yaml'
@@ -20,6 +21,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const workPath = path.join(__dirname, 'work');
+
+
+function crc32ToHex(crc) {
+	// Convert to unsigned 32-bit integer
+	const unsigned = crc >>> 0;
+	// Convert to hex and pad with zeros if needed
+	return unsigned.toString(16).padStart(8, '0');
+}
+
 
 // Function to recursively read project folders
 const readProjects = async (workPath:string) => {
@@ -64,10 +74,13 @@ const readProjects = async (workPath:string) => {
 					const projectName = entry.name;
 					const projectPath = path.join(projectsPath, entry.name);
 					const medias:any[] = []
+					const slug = slugify(entry.name);
 					const projectData:any = {
 						year,
-						slug: entry.name,
+						slug,
+						folder: entry.name,
 						projectName,
+						title: projectName,
 						medias,
 						keywords: [],
 					};
@@ -91,8 +104,7 @@ const readProjects = async (workPath:string) => {
 						const content = fs.readFileSync(aboutPath, 'utf8');
 						projectData.about = content;
 					}
-					// console.log('Read about.md file');
-
+					
 					if(projectData?.keywords){
 						projectData.keywords.forEach((tag) => {
 							if(!keywords.includes(tag)){
@@ -102,16 +114,18 @@ const readProjects = async (workPath:string) => {
 					}
 					// console.log('Handled keywords');
 
-					const projectInfo = {year: projectData.year, slug: projectData.slug, title: projectData.title}
+					const projectInfo = {year: projectData.year, slug: projectData.slug, title: projectData.title, folder: projectData.folder, projectName};
 					// Read media folder
 					const mediaPath = path.join(projectPath, 'media');
+					console.log('Reading media folder', {mediaPath});
 					if (fs.existsSync(mediaPath)) {
 						const mediasFiles = fs.readdirSync(mediaPath);
 						for(let mediaFile of mediasFiles){
+							console.log('checking mediaFile', {mediaFile});
 							if(mediaFile.startsWith('!')) continue;
 							if(mediaFile.includes('!')) continue;
 							if(!mediaFile.includes('.')) continue
-							const mediaElement = await processMediaFile(mediaFile,mediaPath);
+							const mediaElement = await processMediaFile(mediaFile,mediaPath,projectData);
 							if(mediaElement){
 								if(mediasProperties?.[mediaFile]){
 									if(typeof mediasProperties[mediaFile] === "string"){
@@ -143,7 +157,8 @@ const readProjects = async (workPath:string) => {
 	return {config:siteConfig, projects, years, keywords, pages};
 };
 let knownDirs:string[] = [];
-async function processMediaFile(mediaFile:string, mediaPath:string){
+async function processMediaFile(mediaFile:string, mediaPath:string, projectData:any){
+	console.log('processMediaFile',mediaFile,mediaPath)
 	// const thumbnailSizes = [144,288,512];
 	const thumbnailSizes = [
 		{
@@ -195,14 +210,25 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 	}
 	const mediaFullPath = path.join(mediaPath,fileName);
 	
-	const relativeFolder = path.relative(path.join(__dirname,'work'),mediaPath)
-	const staticFolder = path.join(__dirname,'static','projects',relativeFolder)
+	const relativeFolder = path.relative(
+		path.join(__dirname,'work'),
+		mediaPath
+	);
 
-	// console.log({mediaFile,mediaPath,relativeFolder}); 
+	const relativePathParts = relativeFolder.split(path.sep);
+	const projectYear = relativePathParts[0];
+	const projectFolderSrc = relativePathParts[1];
+	const relativeInProject = relativePathParts.slice(2).join(path.sep);
+
+	// const staticFolder = path.join(__dirname,'static','projects',relativeFolder)
+	const staticFolder = path.join(__dirname,'static','projects',projectYear, projectData.slug, relativeInProject);
+
+	console.log({mediaFile,mediaPath,relativeFolder,staticFolder,relativePathParts, projectData}); 
 	// throw 'stop';
 
 	const fileType:string = (fileName.split('.').pop() || "").toLowerCase()
 	mediaItem.fileType = fileType;
+	mediaItem.fullExt = fileType;
 	const mimeType = mime.lookup(fileType)
 	if(!mimeType) return;
 	// console.log('mimeType',mimeType)
@@ -210,14 +236,30 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 	const mediaType = mimeType.split('/')[0]
 	mediaItem.mediaType = mediaType;
 
-	const hash = CRC32C.str(mediaItem.baseName,0)
+
+	const hash = crc32ToHex(CRC32C.str(mediaItem.baseName,0));
 	mediaItem.hash = hash;
+
+	
+	console.log('media info:',{mediaItem})
 
 	const setMediaSize = (mediaItem,width,height)=>{
 		mediaItem.width = width??0;
 		mediaItem.height = height??0;
 		mediaItem.aspectRatio = mediaItem.width/mediaItem.height;
 	}
+
+
+	if(!knownDirs.find(dir=>dir.indexOf(staticFolder)===0)){//not sure of exists
+		[{folder:'full'}].concat(thumbnailSizes).forEach(thumb=>{
+			if(fs.existsSync(path.join(staticFolder,thumb.folder))) return;
+			fs.mkdirSync(path.join(staticFolder,thumb.folder), { recursive: true });
+		})
+		knownDirs.push(staticFolder);
+	}
+	
+			
+	let destinationPath, destinationPathAlt;
 
 	if(mediaFile.endsWith('.cfstream.json')){
 		// console.log('handle cfstream')
@@ -266,6 +308,7 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 
 	}
 	else if(mediaType==="video"){
+
 		await new Promise((res) => {
 			ffprobe(mediaFullPath, { path: ffprobeStatic.path }, function (err, info) {
 				if (err) {
@@ -284,6 +327,12 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 					}
 				}
 				setMediaSize(mediaItem,width,height)
+				
+				const destinationPath = path.join(staticFolder,`full`,`${hash}.${fileType}`)
+				if(!fs.existsSync(destinationPath)){
+					// fs.copyFileSync(mediaFullPath,destinationPath)
+					fs.ensureSymlinkSync(mediaFullPath, destinationPath)
+				}
 				res(true)
 			})
 		});
@@ -305,17 +354,6 @@ async function processMediaFile(mediaFile:string, mediaPath:string){
 			[{folder:'full'}].concat(thumbnailSizes).forEach((size)=>{
 				mediaItem.thumbs[size.folder] = {}
 			})
-			
-			let destinationPath, destinationPathAlt;
-
-
-			if(!knownDirs.find(dir=>dir.indexOf(staticFolder)===0)){//not sure of exists
-				[{folder:'full'}].concat(thumbnailSizes).forEach(thumb=>{
-					if(fs.existsSync(path.join(staticFolder,thumb.folder))) return;
-					fs.mkdirSync(path.join(staticFolder,thumb.folder), { recursive: true });
-				})
-				knownDirs.push(staticFolder);
-			}
 
 			let thumbTasks:any[] = [];
 
@@ -434,6 +472,7 @@ const buildSiteData = async function () {
 
 	// Write the projects array to a JavaScript file
 	const outputPath = path.join(__dirname, 'data/siteData.js');
+	const outputPathLib = path.join(__dirname, 'src/lib/siteData.js');
 	const outputContent = `
 		export default ${JSON.stringify(siteData, null, 2)};
 	`;
@@ -442,10 +481,23 @@ const buildSiteData = async function () {
 
 
 	fs.writeFileSync(outputPath, outputContent, 'utf8');
+	fs.writeFileSync(outputPathLib, outputContent, 'utf8');
 
 	console.log(`Rebuilt ${siteData.projects.length} projects`)
 	console.log('Done rebuilding site data')
 	console.log("\n")
+}
+
+
+
+function slugify(str:string) {
+	return str
+		.toLowerCase()
+		.trim()
+		.replace(/[^\w\s-]/g, '') // remove non-word, non-whitespace, non-hyphen characters
+		.replace(/[\s_-]+/g, '-') // replace spaces, underscores, and hyphens with a single hyphen
+		.replace(/^-+/, '') // trim leading hyphens
+		.replace(/-+$/, ''); // trim trailing hyphens
 }
 
 export default buildSiteData;

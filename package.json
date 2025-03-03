@@ -8,7 +8,9 @@
 		"preview": "vite preview --host",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"lint": "eslint ."
+		"lint": "eslint .",
+		"dev-host": "vite dev --host",
+		"watch-data": "tsx watchData"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
@@ -52,11 +54,13 @@
 		"markdown-it": "^14.0.0",
 		"markdown-it-attrs": "^4.1.6",
 		"markdown-it-container": "^4.0.0",
+		"markdown-it-html5-embed": "^1.0.0",
 		"mime-types": "^2.1.35",
 		"p-limit": "^5.0.0",
 		"path": "^0.12.7",
 		"sharp": "^0.33.2",
 		"svelte-inview": "^4.0.2",
+		"tsx": "^4.19.3",
 		"uuid": "^9.0.1",
 		"webp-converter": "^2.3.3",
 		"xss": "^1.0.14"

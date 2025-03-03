@@ -46,4 +46,6 @@ const config = {
 	}
 };
 
+console.log('exporting config',config)
+
 export default config;

@@ -48,11 +48,11 @@
 	})()
 	$: about =  md.render(project?.about||project?.description||'')
     onMount(() => {
-        // console.log('page',$page);
+        console.log('page',$page);
         // console.log('slug',slug);
         // console.log('siteData',siteData);
         // console.log('projects',projects);
-        // console.log('project',project);
+        console.log('project',project);
         // console.log('about',about);
 		// ready=true
     });
@@ -102,16 +102,18 @@ header {
 </style>
 <!-- <div class="ready" data-ready={ready}></div> -->
 <header>
-	<h1>{project.title}</h1>
+	<h1>{project.title || project.projectName}</h1>
 	<div>{year}</div>
 	<div>{@html about}</div>
 </header>
+{#if project?.keywords && project.keywords.length>0}
 <div class="keywords">
 	# 
 	{#each project.keywords as keyword}
 		<a class="keyword" href="/projects/#search:{keyword}">{keyword}</a>
 	{/each}
 </div>
+{/if}
 <div data-media-cnt={project.medias.length} data-media-cnt-mod2={project.medias.length%2} data-media-cnt-mod3={project.medias.length%3} data-media-cnt-mod5={project.medias.length%5}>
 	<!-- <pre>{JSON.stringify(mediaLoaded)}</pre> -->
 	<GalleryMedia length={project.medias.length} {mediaLoaded}>
@@ -126,7 +128,7 @@ header {
 				{:else if media.mediaType === "iframe"}
 					<IframeMedia mediaItem={media} bind:loaded={mediaLoaded[i]} preload={false}/>
 				{:else if media.mediaType === "video"}
-					<FastVideo cssClass="cover" src="/projects/{year}/{slug}/media/{media.fileName}" bind:loaded={mediaLoaded[i]}   />
+					<FastVideo cssClass="cover" src="/projects/{year}/{slug}/media/full/{media.hash}.{media.fileType}" bind:loaded={mediaLoaded[i]}   />
 				{:else if media.mediaType === "image"}
 					<!-- <img src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" data-full="/projects/{year}/{slug}/media/full/{media.hash}.{media.fullExt}"> -->
 					<FastImage aspectRatio={media.aspectRatio} src="/projects/{year}/{slug}/media/thumb512/{media.hash}.webp" alt="" bind:loaded={mediaLoaded[i]} srcFull={`/projects/${year}/${slug}/media/full/${media.hash}.${media.fullExt}`} />

@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it';
 import markdownItContainer from 'markdown-it-container';
 import markdownItAttrs from 'markdown-it-attrs';
 import xss from 'xss';
+import markdownItHtml5Embed from 'markdown-it-html5-embed';
 
 // Create a new instance of markdown-it
 const md = new MarkdownIt({
@@ -31,17 +32,25 @@ md.renderer.rules.html_block = (tokens, idx, options, env, self) => {
 };
 
 
-const allowList = {...xss.whiteList};
+md.use(markdownItHtml5Embed, { 
+    html5embed: { 
+        useImageSyntax: true,
+        useLinkSyntax: true 
+    } 
+});
+
+
+const allowList = {...xss.whiteList, 'iframe': ['src','width','height','frameborder','allow','allowfullscreen','style','class']};
 for(let el in allowList) {allowList[el].push('class','style');}
 const xssOpts = {
     allowList,
 }
 
 
-md.use(markdownItAttrs, {
-    // This is where you can define your custom rules
-    allowedAttributes: [] 
-});
+// md.use(markdownItAttrs, {
+//     // This is where you can define your custom rules
+//     allowedAttributes: [] 
+// });
 
 
 // Use the markdown-it-container extension for custom tags

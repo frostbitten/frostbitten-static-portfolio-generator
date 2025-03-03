@@ -34,6 +34,7 @@ glob(path.join(__dirname,'static/**/*'), (err, staticFiles) => {
             const knownDirs:string[] = [];
             for(let filePath of files){
 
+                console.log('copy filePath',filePath)
                 if(filePath.includes('!')) continue; //we assume this is part of a directory meant to be ignored
                 if(fs.lstatSync(filePath).isDirectory()) continue;
 

@@ -15,6 +15,7 @@
     import { onMount, beforeUpdate, afterUpdate } from 'svelte';
 
     import { inview } from 'svelte-inview';
+    import { writable } from 'svelte/store';
 
 	//   export let mediaI;
     let ready = false
@@ -31,7 +32,14 @@
     export let aspectRatio:any = null;
     let cssClass:string = ""
     let show: boolean = false;
-    let imgSrc = (preload || lazy) ? src : '';
+    // let imgSrc = (preload || lazy) ? src : '';
+	const imgSrc = writable((preload || lazy) ? src : '');
+
+	imgSrc.subscribe((value)=>{
+		console.log('imgSrc',value)
+		// imgRef.src = value;
+	})
+
 	let naturalWidth = 0;
 	let naturalHeight = 0;
     let isInView: boolean;
@@ -60,7 +68,7 @@
 
 	const enterView = (e:ObserverEventDetails)=>{
 		console.log('inview_enter',imgRef)
-		if(imgSrc!==src){imgSrc=src;}
+		if($imgSrc!==src){$imgSrc=src;}
 		show=true;
 		ready=true;
   	}
@@ -119,7 +127,7 @@
   on:inview_enter={enterView}
   class="fast-image {cssClass}" class:loaded={loaded} class:loaded-partial={loadedPartial} class:loading-partial={loadingPartial} class:show={show} style="--preview-src: {previewSrc};"
 >
-<img class="primary" src={imgSrc} loading="{lazy?'lazy':'eager'}" bind:this={imgRef} data-aspect-ratio="{aspectRatio}" style="{aspectRatio?`--aspect-ratio:${aspectRatio};`:''}" alt={alt} data-full={srcFull} decoding="async">
+<img class="primary" src={$imgSrc} loading="{lazy?'lazy':'eager'}" bind:this={imgRef} data-aspect-ratio="{aspectRatio}" style="{aspectRatio?`--aspect-ratio:${aspectRatio};`:''}" alt={alt} data-full={srcFull} decoding="async">
 {#if preview && !loaded}<img class="preview" src={preview} alt={alt}>{/if}
 {#if !loadedPartial}<div class="fast-image-placeholder"style=""></div>{/if}
 </div>

@@ -4,6 +4,7 @@
     // import { load } from './+page.server';
     import { onMount, afterUpdate, beforeUpdate } from 'svelte';
 	// $: siteData = $page.data.siteData;
+	$: customPages = $page.data.siteConfig?.customPages || [];
 	$: pages = $page.data.pages;
 	$: siteConfig = $page.data.siteConfig;
 	$: loadingGraphic = $page.data.siteConfig?.['loading-graphic'];
@@ -91,6 +92,9 @@
         <nav class="">
             <a href="/">Home</a>
             <a href="/projects#">Projects</a>
+            {#each customPages as page}
+                <a href="{page.url}">{page.title}</a>
+            {/each}
             {#each pages as page}
                 <a href="/{page.slug}">{page.title}</a>
             {/each}

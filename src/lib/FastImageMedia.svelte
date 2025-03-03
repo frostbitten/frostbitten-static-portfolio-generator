@@ -15,3 +15,4 @@
     preview="/projects/{year}/{slug}/media/{previewSize}/{hash}.webp" 
     src="/projects/{year}/{slug}/media/{thumbSize}/{hash}.webp" 
 alt="" />
+<!-- (/projects/{year}/{slug}/media/{thumbSize}/{hash}.webp) -->

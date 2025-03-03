@@ -5,6 +5,7 @@ const ignoreFromBuild = [
     './src/routes/projects/[year]/[projectSlug]/media/[...file]/+server.ts'
 ]
 ignoreFromBuild.forEach((file)=>{
+    console.log('ignoring',file);
     if(!fs.existsSync(file)) return;
     const dir = path.dirname(file);
     const filename = path.basename(file);
