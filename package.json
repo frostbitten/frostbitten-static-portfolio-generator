@@ -12,7 +12,8 @@
 		"refresh-token": "node getRefreshToken.js",
 		"pull-gdrive": "tsx pullGDrive",
 		"dev-host": "vite dev --host",
-		"watch-data": "tsx watchData"
+		"watch-data": "tsx watchData",
+		"build-gdrive": "tsx pullGDrive && tsx watchData build && tsx beforeBuild && vite build && tsx postBuild"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
