@@ -18,3 +18,4 @@ vite.config.ts.timestamp-*
 !*/.gitignore
 /src/lib/siteData.js
 *secret*.json
+siteData.js

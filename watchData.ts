@@ -19,6 +19,8 @@ if(args.includes('build')){
   const watcher = chokidar.watch(folderPath, {
     ignored: /(^|[/\\])\../, // ignore dotfiles
     persistent: true,
+    // usePolling: true, // Polling mode to avoid file locks
+    // interval: 2000, // Polling interval (adjust as needed)
   });
 
   watcher

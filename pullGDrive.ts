@@ -164,4 +164,4 @@ async function pullGDriveFolder() {
 
 
 // Run the script
-pullGDriveFolder();
+await pullGDriveFolder();

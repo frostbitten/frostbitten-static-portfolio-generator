@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
     // import { load } from './+page.server';
     import { onMount, afterUpdate, beforeUpdate } from 'svelte';
+    import { writable } from 'svelte/store';
 	// $: siteData = $page.data.siteData;
 	$: customPages = $page.data.siteConfig?.customPages || [];
 	$: pages = $page.data.pages;
@@ -37,6 +38,23 @@
 
         return scrollbarWidth;
     }
+
+
+    const homeLink = writable('/');
+    const linkIfHome = writable('/projects');
+
+    page.subscribe(() => {
+        console.log('page changed',{$page})
+        // if($page.route.id?.startsWith("/projects/"))
+        const pathParts = $page.route.id?.split('/');
+        if(pathParts.length > 2){
+            homeLink.set(`/${pathParts[1]}`);
+        }else if($page.route.id === '/'){
+            homeLink.set($linkIfHome);
+        }else{
+            homeLink.set('/');
+        }
+    })
     
     let lastLoc = ''
     beforeUpdate(()=>{
@@ -52,6 +70,7 @@
     onMount(()=>{
         const scrollbarWidth = getScrollbarWidth();        // scrollbarWidthStyle = `--scrollbar-width: ${scrollbarWidth}px;`
         document.body.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
+        console.log('page',{$page})
     })
     
 </script>
@@ -86,7 +105,7 @@
 
 <div class="container mx-auto p-4" id="site-wrap" data-pathUrl={$page.url.pathname} style="{loadingGraphicStyle}">
     <div id="site-title" class="flex flex-wrap">
-        <h1><a href="/">{siteConfig.name}</a></h1>
+        <h1><a href={$homeLink}>{siteConfig.name}</a></h1>
     </div>
     <div class="">
         <nav class="">

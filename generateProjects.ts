@@ -83,6 +83,8 @@ const readProjects = async (workPath:string) => {
 						title: projectName,
 						medias,
 						keywords: [],
+						// publishDate: new Date(year, 0, 1), //use year as publish date if not specified
+						// publishDate: `${year}-01-01`, //use year as publish date if not specified
 					};
 
 					// Read project.yaml file
@@ -114,7 +116,17 @@ const readProjects = async (workPath:string) => {
 					}
 					// console.log('Handled keywords');
 
-					const projectInfo = {year: projectData.year, slug: projectData.slug, title: projectData.title, folder: projectData.folder, projectName};
+					projectData.publishDateTimestamp = Date.parse(projectData?.publishDate ?? `${year}-01-01`);
+
+					const projectInfo = {
+						year: projectData.year, 
+						slug: projectData.slug, 
+						title: projectData.title, 
+						folder: projectData.folder, 
+						projectName
+					};
+
+					const usedMedia = [];
 					// Read media folder
 					const mediaPath = path.join(projectPath, 'media');
 					console.log('Reading media folder', {mediaPath});
@@ -127,6 +139,7 @@ const readProjects = async (workPath:string) => {
 							if(!mediaFile.includes('.')) continue
 							const mediaElement = await processMediaFile(mediaFile,mediaPath,projectData);
 							if(mediaElement){
+								usedMedia.push(mediaFile);
 								if(mediasProperties?.[mediaFile]){
 									if(typeof mediasProperties[mediaFile] === "string"){
 										mediaElement.title = mediasProperties[mediaFile];
@@ -138,14 +151,31 @@ const readProjects = async (workPath:string) => {
 								medias.push(mediaElement)
 							}
 						}
-						for(let media of medias){
-							// console.log('handle media second time',media)
-							if(media?.poster){
-								media.poster = medias.find(m=>m.fileName===media.poster);
+					}
+
+					//add media only specified in project.yaml
+					if(mediasProperties){
+						for(let mediaFile in mediasProperties){
+							if(!usedMedia.includes(mediaFile)){
+								console.log('process coded media',{mediaFile})
+								const mediaData = mediasProperties[mediaFile];
+								const mediaElement = await processMediaFile(mediaFile,mediaPath,projectData, mediaData);
+								if(mediaElement){
+									mediaElement.project = projectInfo;
+									medias.push(mediaElement);
+								}
 							}
 						}
-						projectData.cover = medias.find(media=>media.isCover||media.cover) || medias.find(media=>media.mimeType==="image/gif") || medias.find(media=>media.mediaType==="image");
 					}
+					
+					for(let media of medias){
+						// console.log('handle media second time',media)
+						if(media?.poster){
+							media.poster = medias.find(m=>m.fileName===media.poster);
+						}
+					}
+					projectData.cover = medias.find(media=>media.isCover||media.cover) || medias.find(media=>media.mimeType==="image/gif") || medias.find(media=>media.mediaType==="image");
+
 					// console.log('Handled media');
 					projects.push(projectData);
 				}
@@ -157,8 +187,8 @@ const readProjects = async (workPath:string) => {
 	return {config:siteConfig, projects, years, keywords, pages};
 };
 let knownDirs:string[] = [];
-async function processMediaFile(mediaFile:string, mediaPath:string, projectData:any){
-	console.log('processMediaFile',mediaFile,mediaPath)
+async function processMediaFile(mediaFile:string, mediaPath:string, projectData:any, coded = null){
+	console.log('processMediaFile',{mediaFile,mediaPath,projectData,coded});
 	// const thumbnailSizes = [144,288,512];
 	const thumbnailSizes = [
 		{
@@ -227,17 +257,8 @@ async function processMediaFile(mediaFile:string, mediaPath:string, projectData:
 	// throw 'stop';
 
 	const fileType:string = (fileName.split('.').pop() || "").toLowerCase()
-	mediaItem.fileType = fileType;
-	mediaItem.fullExt = fileType;
-	const mimeType = mime.lookup(fileType)
-	if(!mimeType) return;
-	// console.log('mimeType',mimeType)
-	mediaItem.mimeType = mimeType;
-	const mediaType = mimeType.split('/')[0]
-	mediaItem.mediaType = mediaType;
-
-
-	const hash = crc32ToHex(CRC32C.str(mediaItem.baseName,0));
+	// const hash = crc32ToHex(CRC32C.str(mediaItem.baseName,0));
+	const hash = crc32ToHex(CRC32C.str(mediaFullPath,0));
 	mediaItem.hash = hash;
 
 	
@@ -248,6 +269,40 @@ async function processMediaFile(mediaFile:string, mediaPath:string, projectData:
 		mediaItem.height = height??0;
 		mediaItem.aspectRatio = mediaItem.width/mediaItem.height;
 	}
+
+	
+	if(coded){
+		const mediaInfo = coded;
+		console.log('coded mediaInfo: ',mediaInfo)
+		Object.assign(mediaItem, mediaInfo);
+		const width = mediaInfo.width;
+		const height = mediaInfo.height;
+		
+		mediaItem.fileName = mediaFile.split('.').slice(0, -1).join('.');
+		mediaItem.baseName = mediaItem.fileName;
+
+		setMediaSize(mediaItem,width,height)
+		
+		mediaItem.v = mediaInfo.v;
+		mediaItem.mediaType = mediaInfo.type;
+		
+		return mediaItem;
+	}
+
+	
+	mediaItem.fileType = fileType;
+	mediaItem.fullExt = fileType;
+	const mimeType = mime.lookup(fileType)
+	let mediaType;
+	if(!mimeType) {
+		return;
+	}else{
+		// console.log('mimeType',mimeType)
+		mediaItem.mimeType = mimeType;
+		mediaType = mimeType.split('/')[0]
+		mediaItem.mediaType = mediaType;
+	}
+
 
 
 	if(!knownDirs.find(dir=>dir.indexOf(staticFolder)===0)){//not sure of exists
@@ -260,7 +315,6 @@ async function processMediaFile(mediaFile:string, mediaPath:string, projectData:
 	
 			
 	let destinationPath, destinationPathAlt;
-
 	if(mediaFile.endsWith('.cfstream.json')){
 		// console.log('handle cfstream')
 		const mediaInfo = JSON.parse(fs.readFileSync(mediaFullPath, 'utf-8'));
@@ -355,6 +409,11 @@ async function processMediaFile(mediaFile:string, mediaPath:string, projectData:
 				mediaItem.thumbs[size.folder] = {}
 			})
 
+			//check if full size has changed, force update if so
+			// let fullUpdated = false;
+			// const fullDest = path.join(staticFolder,`full`,`${hash}.${fileType}`)
+
+
 			let thumbTasks:any[] = [];
 
 			for(let thumb of thumbnailSizes){
@@ -367,6 +426,7 @@ async function processMediaFile(mediaFile:string, mediaPath:string, projectData:
 					return new Promise(async (res)=>{
 						const destinationPath = path.join(staticFolder,thumbFolder,`${hash}.webp`)
 						const destinationPathAlt = path.join(staticFolder,thumbFolder,`${hash}.${fileType}`)
+
 						if(!fs.existsSync(destinationPath) && !fs.existsSync(destinationPathAlt)){
 							console.log(`generating optimized ${size}px thumbnail. `+mediaItem.baseName);
 							// await new Promise(async (res)=>{
